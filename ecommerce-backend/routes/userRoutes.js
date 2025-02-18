@@ -14,4 +14,8 @@ router.patch('/resetPassword/:token',authController.resetPassword);
 
 router.patch('/updateMyPassword',authController.protect,authController.updatePassword);
 
+// In routes/userRoutes.js - Add these new routes
+
+router.get('/me', authController.protect, userController.getMe);
+router.patch('/updateMe', authController.protect, userController.updateMe);
 module.exports = router;
