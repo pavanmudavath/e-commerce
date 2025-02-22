@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login } from '../../utils/api';
 import Navbar from '../../components/Navbar';
-import Link from 'next/link'; // Import Link from Next.js
+import Link from 'next/link';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -15,8 +15,16 @@ export default function Login() {
     e.preventDefault();
     try {
       const data = await login(email, password);
+
+      // Store the token and user data in localStorage
       localStorage.setItem('token', data.token);
-      router.push('/');
+      localStorage.setItem('userData', JSON.stringify({
+        email: email,
+        name: data.user?.name || 'User', // Adjust based on your API response
+      }));
+
+      // Redirect to the dashboard or pricing page
+      router.push('/dashboard'); // Or /pricing, depending on your flow
     } catch (error) {
       setError(error.response?.data?.message || 'Login failed. Please try again.');
     }

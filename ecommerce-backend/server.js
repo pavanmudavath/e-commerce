@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const userRouter = require('./routes/userRoutes');
+const paymentRouter = require('./routes/paymentRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -10,16 +11,34 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// CORS middleware
 app.use(cors({
     origin: 'http://localhost:3001',
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-signature']
 }));
 
-// Body parser
-app.use(express.json({ limit: '10kb' }));
+// Raw body parser for webhook route ONLY
+app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
+
+// Store raw body for verification
+app.use((req, res, next) => {
+    if (req.originalUrl === '/api/v1/payments/webhook') {
+        req.rawBody = req.body;
+    }
+    next();
+});
+
+// Regular body parser for all other routes
+app.use(express.json({ 
+    limit: '10kb',
+    verify: (req, res, buf) => {
+        if (req.originalUrl !== '/api/v1/payments/webhook') {
+            req.rawBody = buf;
+        }
+    }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // Database connection
@@ -44,8 +63,18 @@ mongoose.connection.on('disconnected', () => {
     console.log('MongoDB disconnected');
 });
 
+// Add request logging middleware for debugging
+app.use((req, res, next) => {
+    if (req.originalUrl === '/api/v1/payments/webhook') {
+        console.log('Webhook Request Headers:', req.headers);
+        console.log('Webhook Raw Body:', req.rawBody?.toString());
+    }
+    next();
+});
+
 // Routes
-app.use('/api/v1/users', userRouter);
+app.use('/api/v1', userRouter);
+app.use('/api/v1/payments', paymentRouter);
 
 // Root route
 app.get('/', (req, res) => {
@@ -64,6 +93,15 @@ app.all('*', (req, res) => {
 app.use((err, req, res, next) => {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
+
+    // Log webhook-related errors with more detail
+    if (req.originalUrl === '/api/v1/payments/webhook') {
+        console.error('Webhook Error:', {
+            error: err,
+            headers: req.headers,
+            body: req.rawBody?.toString()
+        });
+    }
 
     res.status(err.statusCode).json({
         status: err.status,

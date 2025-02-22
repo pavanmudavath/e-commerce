@@ -1,16 +1,16 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import api from '../../utils/api';
 import Navbar from '../../components/Navbar';
+import Link from 'next/link';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    passwordConfirm: ''
+    passwordConfirm: '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function Signup() {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.id]: e.target.value
+      [e.target.id]: e.target.value,
     });
   };
 
@@ -39,18 +39,26 @@ export default function Signup() {
         throw new Error('Passwords do not match');
       }
 
-      const response = await api.post('/signup', formData);
-      
+      // Signup the user
+      const response = await api.post('/users/signup', formData);
+
       if (response.data.token) {
+        // Store the token and user data in localStorage
         localStorage.setItem('token', response.data.token);
-        router.push('/');
+        localStorage.setItem('userData', JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+        }));
+
+        // Redirect to the pricing page after signup
+        router.push('/pricing');
       } else {
         throw new Error('Signup successful but no token received');
       }
     } catch (err) {
       setError(
-        err.response?.data?.message || 
-        err.message || 
+        err.response?.data?.message ||
+        err.message ||
         'Signup failed. Please try again.'
       );
     } finally {
@@ -64,7 +72,7 @@ export default function Signup() {
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded-lg shadow-md w-96">
           <h1 className="text-2xl font-bold mb-6 text-center">Signup</h1>
-          
+
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
               {error}

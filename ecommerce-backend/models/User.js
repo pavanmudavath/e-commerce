@@ -49,8 +49,21 @@ const userSchema = new mongoose.Schema({
         type:Boolean,
         default:true,
         select:false
-    }
+    },subscriptionStatus: {
+        type: String,
+        enum: ['active', 'cancelled', 'inactive'],
+        default: 'inactive',
+    },
+    subscriptionEndDate: {
+        type: Date,
+    },
+    planType: {
+        type: String,
+        enum: ['monthly', 'yearly'],
+        default: 'monthly',
+    },
 });
+
 
 //Middleware to update the 'UpdatedAt' field before saving
 userSchema.pre('save',function(next){

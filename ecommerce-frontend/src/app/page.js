@@ -1,29 +1,48 @@
-import Link from 'next/link';
-import Navbar from '../components/Navbar';
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import api from './../utils/api';
+import Navbar from './../components/Navbar';
 
 export default function Home() {
+  const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState(false);
+
+  useEffect(() => {
+    const checkAuthAndSubscription = async () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('userData');
+
+      if (!token || !userData) {
+        setIsLoggedIn(false);
+        return;
+      }
+
+      setIsLoggedIn(true);
+
+      try {
+        // Fetch the user's subscription status
+        const subscriptionResponse = await api.get('/payments/subscriptions/current');
+        if (subscriptionResponse.data.data.subscription?.status === 'active') {
+          setHasSubscription(true);
+        }
+      } catch (err) {
+        console.error('Failed to fetch subscription:', err);
+      }
+    };
+
+    checkAuthAndSubscription();
+  }, []);
+
   return (
     <>
       <Navbar />
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100">
-        <h1 className="text-4xl font-bold mb-8 text-center">Welcome to E-Commerce</h1>
-        <p className="text-lg text-gray-600 mb-8 text-center">
-          Explore our amazing products and enjoy a seamless shopping experience.
-        </p>
-        {/* <div className="space-x-4">
-          <Link
-            href="/login"
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
-          >
-            Login
-          </Link>
-          <Link
-            href="/signup"
-            className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600"
-          >
-            Signup
-          </Link>
-        </div> */}
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold mb-4">Welcome to E-Commerce</h1>
+          <p className="text-gray-600">Your one-stop shop for all things amazing!</p>
+        </div>
       </div>
     </>
   );

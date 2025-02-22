@@ -1,8 +1,12 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api/v1/users', // Replace with your backend URL
+  baseURL: 'http://localhost:3000/api/v1', // Replace with your backend URL
 });
+
+// const api = axios.create({
+//   baseURL: 'http://localhost:3000/api/v1', // Update this to match your backend
+// });
 
 // Add a request interceptor to include the token in headers
 api.interceptors.request.use(
@@ -17,14 +21,14 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
+///api/v1/users/login
 // Add a response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/users/login';
     }
     return Promise.reject({
       message: error.response?.data?.message || 'An error occurred',
@@ -37,7 +41,7 @@ api.interceptors.response.use(
 // Authentication endpoints
 export const login = async (email, password) => {
   try {
-    const response = await api.post('/login', { email, password });
+    const response = await api.post('/users/login', { email, password });
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
     }
@@ -50,7 +54,7 @@ export const login = async (email, password) => {
 
 export const signup = async (formData) => {
   try {
-    const response = await api.post('/signup', {
+    const response = await api.post('/users/signup', {
       name: formData.name,
       email: formData.email,
       password: formData.password,
@@ -80,7 +84,7 @@ export const logout = () => {
 // User profile endpoints
 export const fetchUser = async () => {
   try {
-    const response = await api.get('/me');
+    const response = await api.get('/users/me');
     return response.data.data.user; // Adjusted to match your backend response structure
   } catch (error) {
     console.error('Fetch user error:', error);
@@ -90,7 +94,7 @@ export const fetchUser = async () => {
 
 export const updateProfile = async (userData) => {
   try {
-    const response = await api.patch('/updateMe', userData);
+    const response = await api.patch('/users/updateMe', userData);
     return response.data;
   } catch (error) {
     console.error('Update profile error:', error);
@@ -101,7 +105,7 @@ export const updateProfile = async (userData) => {
 // Password management endpoints
 export const forgotPassword = async (email) => {
   try {
-    const response = await api.post('/forgotPassword', { email });
+    const response = await api.post('/users/forgotPassword', { email });
     return response.data;
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -111,7 +115,7 @@ export const forgotPassword = async (email) => {
 
 export const resetPassword = async (token, password, passwordConfirm) => {
   try {
-    const response = await api.patch(`/resetPassword/${token}`, { 
+    const response = await api.patch(`/users/resetPassword/${token}`, { 
       password, 
       passwordConfirm 
     });
@@ -127,7 +131,7 @@ export const resetPassword = async (token, password, passwordConfirm) => {
 
 export const updatePassword = async (currentPassword, newPassword, newPasswordConfirm) => {
   try {
-    const response = await api.patch('/updateMyPassword', {
+    const response = await api.patch('/users/updateMyPassword', {
       passwordCurrent: currentPassword,
       password: newPassword,
       passwordConfirm: newPasswordConfirm,
@@ -145,12 +149,27 @@ export const updatePassword = async (currentPassword, newPassword, newPasswordCo
 // Product endpoints (you might want to move this to a separate file)
 export const fetchProducts = async () => {
   try {
-    const response = await api.get('/products');
+    const response = await api.get('/users/products');
     return response.data;
   } catch (error) {
     console.error('Fetch products error:', error);
     throw error;
   }
 };
+
+// Add this to your existing API utility
+export const createSubscription = async (plan, userEmail) => {
+  try {
+    const response = await api.post('/payments/create-subscription', {
+      plan,
+      userEmail,
+    });
+    return response.data;
+  } catch (err) {
+    throw new Error(err.response?.data?.message || 'Failed to create subscription.');
+  }
+};
+
+
 
 export default api;

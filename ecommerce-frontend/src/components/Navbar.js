@@ -2,36 +2,50 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { fetchUser, logout } from './../utils/api';
+import api from './../utils/api'; // Import the api module
 
 export default function Navbar() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
+    const checkAuthAndSubscription = async () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('userData');
 
-    if (token) {
-      fetchUser().then((userData) => {
-        setUser(userData);
-      }).catch(() => {
+      if (!token || !userData) {
         setIsLoggedIn(false);
-      });
-    }
+        return;
+      }
+
+      setIsLoggedIn(true);
+
+      try {
+        // Fetch the user's data
+        const userResponse = await api.get('/users/me');
+        setUser(userResponse.data.data.user);
+
+        // Fetch the user's subscription status
+        const subscriptionResponse = await api.get('/payments/subscriptions/current');
+        if (subscriptionResponse.data.data.subscription?.status === 'active') {
+          setHasSubscription(true);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user or subscription data:', err);
+      }
+    };
+
+    checkAuthAndSubscription();
   }, []);
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem('token');
+    localStorage.removeItem('userData');
     setIsLoggedIn(false);
     setUser(null);
     router.push('/login');
-  };
-
-  const toggleDropdown = () => {
-    setIsDropdownOpen(!isDropdownOpen);
   };
 
   return (
@@ -42,29 +56,37 @@ export default function Navbar() {
         </Link>
         <div className="flex items-center space-x-4">
           {isLoggedIn ? (
-            <div className="relative">
-              <button
-                onClick={toggleDropdown}
-                className="flex items-center justify-center w-10 h-10 bg-white rounded-full text-blue-600 font-bold hover:bg-gray-200 focus:outline-none"
-              >
-                {user ? user.name.charAt(0).toUpperCase() : 'U'}
-              </button>
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg">
-                  <Link href="/update-password">
-                    <div className="block px-4 py-2 text-gray-800 hover:bg-blue-100">Change Password</div>
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-gray-800 hover:bg-blue-100"
-                  >
-                    Logout
-                  </button>
-                </div>
+            <>
+              {/* Show Dashboard link if the user has an active subscription */}
+              {hasSubscription && (
+                <Link href="/dashboard" className="text-white hover:text-blue-200">
+                  Dashboard
+                </Link>
               )}
-            </div>
+
+              {/* Show Pricing link if the user does not have an active subscription */}
+              {!hasSubscription && (
+                <Link href="/pricing" className="text-white hover:text-blue-200">
+                  Pricing
+                </Link>
+              )}
+
+              {/* User Icon */}
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-blue-600 font-bold">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="text-white hover:text-blue-200"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <>
+              {/* Login and Signup Links */}
               <Link href="/login" className="text-white hover:text-blue-200">
                 Login
               </Link>
